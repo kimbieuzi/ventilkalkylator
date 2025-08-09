@@ -1,0 +1,5 @@
+product_id,name,service,hygienic,trim,DN_min,DN_max,PN_min,PN_max,Kvs_nom_list,kvs_min,kvs_max,temp_max_C,datasheet_url,notes
+3241,SAMSON 3241 Globe,reglering,false,STD,15,150,16,40,0.4|0.63|1|1.6|2.5|4|6.3|10|16|25|40|63|100|160,0.4,160,350,https://www.samsongroup.com/document/t80120en.pdf,"Ange gärna Kvs-lista per DN i kolumnen 'Kvs_nom_list' eller duplicera rader per DN."
+41-23,SAMSON 41-23 PRV,reducering,false,STD,15,100,16,40,0.4|0.63|1|1.6|2.5|4|6.3|10|16|25|40|63|100|160,0.4,160,350,https://www.samsongroup.com/document/t25120en.pdf,"Självverkande."
+3347,SAMSON 3347/3349 Hygienisk,reglering,true,USP-VI,6,125,16,16,0.4|0.63|1|1.6|2.5|4|6.3|10|16|25|40|63|100,0.4,100,180,https://usa.samsongroup.com/en/products-applications/product-selector/valves/details/valvetype/3347-pneumatic-din/,"Hygienisk. Kontrollera ytjämnhet/packningar."
+72.3,Vetec 72.3 Rotary Plug,reglering,false,Maxifluss,25,600,16,40,63|100|160|250|400|630|1000,63,1000,400,https://vetec.samsongroup.com/en/products-applications/products/rotary-plug-valves/,"Rotary plug, hög Kvs."

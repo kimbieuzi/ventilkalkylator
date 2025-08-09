@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAMSON – Ventilkalkylator v4 (Kvs först + Gas/Ånga BETA)</title>
+<style>
+:root{
+  --bg:#0f172a; --card:#0b1220; --ink:#e5e7eb; --muted:#94a3b8; --accent:#3E8CCB; --border:#1f2937;
+  --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:#93c5fd;text-decoration:none}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(15,23,42,.9);backdrop-filter:blur(6px);z-index:10}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700}
+.logo img{height:28px;width:auto;display:block}
+.container{max-width:1180px;margin:0 auto;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+.btn{display:inline-block;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:#0b1220;color:#fff;cursor:pointer}
+.btn.accent{background:var(--accent);color:#061423;border-color:#0d5c35;font-weight:700}
+input,select{width:100%;padding:9px 11px;border-radius:10px;border:1px solid #374151;background:#0b1220;color:#fff}
+label{display:block;font-size:12px;color:var(--muted);margin:6px 0 4px}
+h1{font-size:20px;margin:0}
+h2{font-size:18px;margin:0 0 8px}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #334155;font-size:12px;color:var(--muted)}
+.kpi{font-size:36px;font-weight:800}
+.kpi small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.sticky{position:sticky;top:54px;z-index:9;border:1px dashed #334155}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid #334155}
+.pill.ok{background:#072b18;border-color:#0d5c35;color:#86efac}
+.pill.warn{background:#3a2a00;border-color:#8a6d1b;color:#fde68a}
+.pill.bad{background:#3a0a0a;border-color:#7f1d1d;color:#fecaca}
+small.note{color:var(--muted);font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1}
+hr.div{border:0;height:1px;background:var(--border);margin:10px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.tab{padding:8px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:#0b1220}
+.tab.active{background:var(--accent);color:#061423;border-color:#0d5c35;font-weight:700}
+.hidden{display:none}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border:1px solid #334155;padding:6px 8px;font-size:12px;text-align:left}
+.table th{background:#0a0f1d}
+footer{padding:14px 16px;color:var(--muted);border-top:1px solid var(--border);margin-top:10px}
+textarea.code{width:100%;min-height:160px;font-family:ui-monospace,Consolas,monospace;background:#0a0f1d;color:#cbd5e1;border:1px solid #334155;border-radius:10px;padding:8px}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="logo"><img id="navLogo" alt="SAMSON logotyp"><span>SAMSON Ventilkalkylator v4</span></div>
+  <div class="actions">
+    <button class="btn" id="btnShare">Dela länk</button>
+    <button class="btn" id="btnReset">Återställ</button>
+    <button class="btn" id="btnCSV">Exportera CSV</button>
+    <button class="btn accent" id="btnPDF">Skapa PDF</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" data-tab="liquid">Vätska (Kvs)</div>
+    <div class="tab" data-tab="gas">Gas/Ånga (BETA)</div>
+    <div class="tab" data-tab="suggest">Produktförslag</div>
+    <div class="tab" data-tab="settings">Inställningar</div>
+  </div>
+
+  <section class="card sticky">
+    <div class="kpi">Kvs nominell: <span id="kpiKvs">—</span></div>
+    <small class="note">Kv: <b id="kpiKv">—</b> · ≈DN: <b id="kpiDN">—</b> · σ: <b id="kpiSigma">—</b></small>
+  </section>
+
+  <!-- LIQUID TAB -->
+  <section id="tab-liquid" class="card">
+    <h2>1) Kvs – huvudberäkning (vätska)</h2>
+    <div class="row">
+      <div>
+        <label>Flöde Q</label>
+        <div class="row">
+          <input id="q" type="number" step="0.001" value="10">
+          <select id="qu">
+            <option value="m3h" selected>m³/h</option>
+            <option value="ls">L/s</option>
+          </select>
+        </div>
+      </div>
+      <div><label>ΔP (bar)</label><input id="dp" type="number" step="0.001" value="1"></div>
+      <div><label>SG (vatten=1)</label><input id="sg" type="number" step="0.01" value="1.0"></div>
+    </div>
+    <div class="row">
+      <div><label>Öppning vid design (%)</label><input id="open" type="number" step="1" value="80"></div>
+      <div>
+        <label>Karakteristik</label>
+        <select id="char">
+          <option value="linear" selected>Linjär</option>
+          <option value="eqp">Equal %</option>
+        </select>
+      </div>
+      <div id="rWrap"><label>R-värde (30–50)</label><input id="r" type="number" step="1" value="50"></div>
+    </div>
+    <hr class="div">
+    <div class="row">
+      <div><span class="badge">Kv: <b id="kv">—</b></span></div>
+      <div><span class="badge">Kvs (krävt): <b id="kvsReq">—</b></span></div>
+      <div style="min-width:220px">
+        <label>Kvs nominell (serie)</label>
+        <select id="kvsNomSel"></select>
+      </div>
+      <div><span class="badge">≈ DN: <b id="dn">—</b></span></div>
+    </div>
+
+    <h2 style="margin-top:10px">2) ΔP & kavitationscheck</h2>
+    <div class="row">
+      <div><label>P₁ (bar)</label><input id="p1" type="number" step="0.01" value="5"></div>
+      <div><label>P₂ (bar)</label><input id="p2" type="number" step="0.01" value="3"></div>
+      <div><label>Pᵥ (bar, ångtryck)</label><input id="pv" type="number" step="0.001" value="0.023"></div>
+    </div>
+    <hr class="div">
+    <div class="row">
+      <div><span class="badge">ΔP: <b id="dp2">—</b> bar</span></div>
+      <div><span class="badge">σ: <b id="sigma">—</b></span></div>
+      <div><span id="cav" class="pill">—</span></div>
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <a class="btn" id="btnRFQ" href="#">Skicka RFQ (e-post)</a>
+      <button class="btn accent" id="btnCRM">Skicka till CRM</button>
+    </div>
+    <small class="note">Formler: Kv = Q·√(SG/ΔP). Equal-%: f=(R^x−1)/(R−1), x=öppning (0–1). Kvs≈Kv/f. σ &lt; 2 hög risk · 2–3 medel · ≥3 låg. P₂ ≤ Pᵥ → flashingrisk.</small>
+  </section>
+
+  <!-- GAS/STEAM TAB -->
+  <section id="tab-gas" class="card hidden">
+    <h2>Gas/Ånga (BETA) – förenklad dimensionering</h2>
+    <div class="row">
+      <div><label>Flöde (volym) vid drift Q (m³/h)</label><input id="g_q" type="number" step="0.001" value="1000"></div>
+      <div><label>Inlopp P₁ (bar abs)</label><input id="g_p1" type="number" step="0.01" value="5"></div>
+      <div><label>Utlopp P₂ (bar abs)</label><input id="g_p2" type="number" step="0.01" value="3"></div>
+    </div>
+    <div class="row">
+      <div><label>Temperatur T₁ (°C)</label><input id="g_t" type="number" step="0.1" value="20"></div>
+      <div><label>Molekylvikt M (g/mol) – Luft 28.97, Ånga 18.02</label><input id="g_mw" type="number" step="0.01" value="28.97"></div>
+      <div><label>Kompressibilitet Z (≈1)</label><input id="g_z" type="number" step="0.01" value="1.0"></div>
+    </div>
+    <hr class="div">
+    <div class="row">
+      <div><span class="badge">Densitet ρ₁ (kg/m³): <b id="g_rho">—</b></span></div>
+      <div><span class="badge">Kv (förenklad): <b id="g_kv">—</b></span></div>
+      <div><span class="badge">Kvs (krävt vid öppning): <b id="g_kvsReq">—</b></span></div>
+      <div><span class="badge">Kvs nominell: <b id="g_kvsNom">—</b></span></div>
+    </div>
+    <small class="note">Metod: ideal gas ρ = (P·M)/(Z·R·T). Sedan Kv≈Q·√(ρ/ΔP) med Q i m³/h @ drift. Detta är en förenkling och gäller ej vid strypt (choked) gasströmning – verifiera alltid mot IEC 60534-2-1.</small>
+  </section>
+
+  <!-- SUGGESTIONS TAB -->
+  <section id="tab-suggest" class="card hidden">
+    <h2>Produktförslag</h2>
+    <div class="row">
+      <div>
+        <label>Tjänst</label>
+        <select id="svc"><option value="reglering" selected>Reglering</option><option value="reducering">Tryckreducering</option></select>
+      </div>
+      <div>
+        <label>Hygienisk?</label>
+        <select id="hyg"><option value="false" selected>Nej</option><option value="true">Ja</option></select>
+      </div>
+      <div>
+        <label>Prioritera kavitationstålighet</label>
+        <select id="cavpref"><option value="auto" selected>Auto (σ)</option><option value="low">Låg</option><option value="high">Hög</option></select>
+      </div>
+      <div>
+        <label>Produktbibliotek (CSV, exakt)</label>
+        <input id="lib" type="file" accept=".csv">
+      </div>
+    </div>
+    <div class="actions" style="margin-top:6px">
+      <button class="btn accent" id="btnSuggest">Generera förslag</button>
+      <a class="btn" id="btnDatasheet" href="#" target="_blank">Öppna första datablad</a>
+    </div>
+    <div class="card" style="margin-top:8px;background:#0a0f1d">
+      <div id="suggestText" class="note">Fyll i Kvs/σ på fliken Vätska eller Gas/Ånga och klicka ”Generera förslag”.</div>
+      <ul id="suggestList"></ul>
+    </div>
+    <details style="margin-top:8px">
+      <summary>🎛️ Regler (inneboende – kan ersättas av CSV)</summary>
+      <textarea class="code" id="rulesPre" readonly></textarea>
+    </details>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section id="tab-settings" class="card hidden">
+    <h2>Inställningar & integration</h2>
+    <div class="row">
+      <div><label>Accentfärg (hex)</label><input id="accent" value="#3E8CCB"></div>
+      <div><label>Logotyp URL</label><input id="logo" placeholder="https://..."></div>
+      <div><label>RFQ-e-post</label><input id="rfq" value="sales@samson.se"></div>
+    </div>
+    <div class="row">
+      <div><label>CRM Webhook URL (POST JSON)</label><input id="crmUrl" placeholder="https://exempel.com/webhook"></div>
+      <div><label>API-nyckel (valfritt, skickas som header X-API-Key)</label><input id="crmKey" placeholder=""></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Kvs-serie (kommaseparerad)</label>
+        <input id="series" value="0.4,0.63,1,1.6,2.5,4,6.3,10,16,25,40,63,100,160,250,400,630,1000">
+      </div>
+      <div>
+        <label>DN-regler (JSON)</label>
+        <textarea id="dnJSON" class="code"></textarea>
+      </div>
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn" id="btnApply">Spara & uppdatera</button>
+      <button class="btn" id="btnLoad">Återläs</button>
+    </div>
+    <small class="note">Tips: Lägg ert exakta CSV-bibliotek i ”Produktförslag”-fliken. CSV-exempel följer med leveransen.</small>
+  </section>
+</div>
+
+<footer>© SAMSON Sverige · Förenklad dimensionering. Verifiera alltid mot produktdatablad/trim/FL/xT/material/klass/anslutning/temperatur.</footer>
+
+<script>
+// ---------- Helpers ----------
+const $ = id => document.getElementById(id);
+const round = (x,n=3)=> (isFinite(x)? Number(x).toFixed(n) : '—');
+const clamp=(v,min,max)=> Math.max(min, Math.min(max, v));
+// Robust storage (works even if localStorage is blocked)
+const __memStore = {};
+const storage = {
+  get(key){ try{ const v = window.localStorage && window.localStorage.getItem(key); return v? JSON.parse(v): null; } catch(e){ try{ return __memStore[key] || null; } catch(_){ return null; } },
+  set(key, val){ try{ window.localStorage && window.localStorage.setItem(key, JSON.stringify(val)); } catch(e){ __memStore[key]=val; } },
+  remove(key){ try{ window.localStorage && window.localStorage.removeItem(key); } catch(e){ delete __memStore[key]; } }
+};
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.classList.add('hidden'));
+  t.classList.add('active');
+  $('tab-'+t.dataset.tab).classList.remove('hidden');
+}));
+
+// Defaults
+let SERIES = [0.4,0.63,1,1.6,2.5,4,6.3,10,16,25,40,63,100,160,250,400,630,1000];
+let DN_RULES = [
+  {"kvs_max": 4, "dn": "DN15"},{"kvs_max": 6.3, "dn": "DN20"},{"kvs_max": 10, "dn": "DN25"},
+  {"kvs_max": 16, "dn": "DN32"},{"kvs_max": 25, "dn": "DN40"},{"kvs_max": 40, "dn": "DN50"},
+  {"kvs_max": 63, "dn": "DN65"},{"kvs_max": 100, "dn": "DN80"},{"kvs_max": 160, "dn": "DN100"},
+  {"kvs_max": 250, "dn": "DN125"},{"kvs_max": 400, "dn": "DN150"},{"kvs_max": 630, "dn": "DN200"},
+  {"kvs_max": 1000, "dn": "DN250"}
+];
+let RULES = {
+  dn_table: DN_RULES,
+  products: [
+    {"id":"3241","name":"SAMSON 3241 (globe reglerventil)","when":{"service":"reglering","hygienic":false,"kvs_min":0.4,"kvs_max":160},"datasheet_url":"https://www.samsongroup.com/document/t80120en.pdf"},
+    {"id":"vetec","name":"Vetec 72.3 rotary plug","when":{"service":"reglering","hygienic":false,"kvs_min":63,"kvs_max":1000},"datasheet_url":"https://vetec.samsongroup.com/en/products-applications/products/rotary-plug-valves/"},
+    {"id":"4123","name":"SAMSON 41-23 (självverkande PRV)","when":{"service":"reducering","hygienic":false,"kvs_min":0.4,"kvs_max":160},"datasheet_url":"https://www.samsongroup.com/document/t25120en.pdf"},
+    {"id":"3347","name":"SAMSON 3347/3349 (hygienisk)","when":{"service":"reglering","hygienic":true,"kvs_min":0.4,"kvs_max":100},"datasheet_url":"https://usa.samsongroup.com/en/products-applications/product-selector/valves/details/valvetype/3347-pneumatic-din/"}
+  ]
+};
+$('rulesPre').value = JSON.stringify(RULES, null, 2);
+
+// Populate Kvs select
+function refreshKvsSelect(defaultValue){
+  const sel=$('kvsNomSel'); sel.innerHTML='';
+  SERIES.forEach(v=>{
+    const opt=document.createElement('option'); opt.value=String(v); opt.textContent=String(v);
+    sel.appendChild(opt);
+  });
+  if(defaultValue && SERIES.includes(defaultValue)) sel.value=String(defaultValue);
+}
+
+// Units conversions
+function Q_m3h_liquid(){
+  const q=parseFloat($('q').value)||0;
+  return $('qu').value==='ls' ? q*3.6 : q;
+}
+
+// Opening fraction
+function openingFraction(){
+  const x = clamp((parseFloat($('open').value)||80), 1, 99)/100;
+  if($('char').value==='linear') return x;
+  const R = clamp(parseFloat($('r').value)||50, 10, 100);
+  return clamp((Math.pow(R,x)-1)/(R-1), 0.01, 0.999);
+}
+
+// Nominal Kvs from series
+function suggestNominalKvs(kvsReq){
+  for(const v of SERIES){ if(kvsReq<=v) return v; }
+  return SERIES[SERIES.length-1];
+}
+function estimateDN(kvsNom){
+  for(const row of DN_RULES){ if(kvsNom<=row.kvs_max) return row.dn; }
+  return DN_RULES[DN_RULES.length-1].dn;
+}
+
+// Liquid compute
+function updateKvs(){
+  const Q=Q_m3h_liquid();
+  const dP=parseFloat($('dp').value)||0;
+  const SG=parseFloat($('sg').value)||1;
+  let Kv=NaN, KvsReq=NaN, KvsNom=NaN, DN='—';
+  if(dP>0){
+    Kv = Q * Math.sqrt(SG / dP);
+    const f = openingFraction();
+    if(f>0){ KvsReq = Kv / f; KvsNom = suggestNominalKvs(KvsReq); }
+  }
+  refreshKvsSelect(KvsNom);
+  $('kv').textContent = round(Kv);
+  $('kvsReq').textContent = round(KvsReq);
+  $('kvsNomSel').value = isFinite(KvsNom)? String(KvsNom) : (SERIES[0] || '');
+  const kn = parseFloat($('kvsNomSel').value); DN = isFinite(kn)? estimateDN(kn) : '—';
+  $('dn').textContent = DN; $('kpiKv').textContent = round(Kv); $('kpiKvs').textContent = isFinite(kn)? String(kn) : '—'; $('kpiDN').textContent = DN;
+  updateRFQ();
+}
+$('kvsNomSel').addEventListener('change', ()=>{
+  const kn=parseFloat($('kvsNomSel').value);
+  $('kpiKvs').textContent = isFinite(kn)? String(kn) : '—';
+  $('dn').textContent = isFinite(kn)? estimateDN(kn) : '—';
+  $('kpiDN').textContent = $('dn').textContent;
+  updateRFQ();
+});
+
+// Cavitation
+function updateCav(){
+  const p1=parseFloat($('p1').value)||0;
+  const p2=parseFloat($('p2').value)||0;
+  const pv=parseFloat($('pv').value)||0.023;
+  const dP = p1 - p2;
+  $('dp2').textContent = round(dP);
+  if(dP<=0){ $('sigma').textContent='—'; $('cav').textContent='—'; $('cav').className='pill'; $('kpiSigma').textContent='—'; return; }
+  const sigma = (p1 - pv) / dP;
+  $('sigma').textContent = round(sigma,2);
+  $('kpiSigma').textContent = round(sigma,2);
+  let txt='—', cls='pill';
+  if(p2<=pv){ txt='Flashingrisk'; cls='pill bad'; }
+  else if(sigma<2){ txt='Hög kavitationsrisk'; cls='pill bad'; }
+  else if(sigma<3){ txt='Medel kavitationsrisk'; cls='pill warn'; }
+  else { txt='Låg kavitationsrisk'; cls='pill ok'; }
+  $('cav').textContent=txt; $('cav').className=cls;
+}
+
+// Gas/Steam BETA
+function gas_density(PbarA, TdegC, MW_gmol, Z=1.0){
+  // ρ = (P·M)/(Z·R·T)
+  const P = PbarA * 1e5;       // Pa
+  const T = (TdegC + 273.15);  // K
+  const M = MW_gmol / 1000.0;  // kg/mol
+  const R = 8.314462618;       // J/(mol·K)
+  return (P * M) / (Z * R * T); // kg/m3
+}
+function gas_calc(){
+  const Q = parseFloat($('g_q').value)||0;      // m3/h at operating
+  const P1 = parseFloat($('g_p1').value)||0;    // bar abs
+  const P2 = parseFloat($('g_p2').value)||0;    // bar abs
+  const T1 = parseFloat($('g_t').value)||20;    // C
+  const MW = parseFloat($('g_mw').value)||28.97;
+  const Z  = parseFloat($('g_z').value)||1.0;
+  if(P1<=0 || P2<=0 || P2>=P1 || Q<=0){ $('g_rho').textContent='—'; $('g_kv').textContent='—'; $('g_kvsReq').textContent='—'; $('g_kvsNom').textContent='—'; return; }
+  const rho = gas_density(P1, T1, MW, Z);
+  const dP = P1 - P2; // bar
+  const Kv = Q * Math.sqrt((rho) / dP); // simplified non-choked
+  const f = openingFraction();
+  const KvsReq = f>0 ? Kv/f : NaN;
+  const KvsNom = isFinite(KvsReq) ? suggestNominalKvs(KvsReq) : NaN;
+  $('g_rho').textContent = round(rho,3);
+  $('g_kv').textContent = round(Kv,3);
+  $('g_kvsReq').textContent = round(KvsReq,3);
+  $('g_kvsNom').textContent = isFinite(KvsNom)? String(KvsNom) : '—';
+  // Sync headline to Kvs from gas if filled
+  if(isFinite(KvsNom)){
+    $('kvsNomSel').value = String(KvsNom);
+    const DN = estimateDN(KvsNom);
+    $('dn').textContent = DN;
+    $('kpiKvs').textContent = String(KvsNom);
+    $('kpiDN').textContent = DN;
+  }
+}
+['g_q','g_p1','g_p2','g_t','g_mw','g_z','open','char','r'].forEach(id=>{ if($(id)) $(id).addEventListener('input', gas_calc); });
+
+// CSV parsing
+let PRODUCT_LIB = [];
+function parseCSV(str){
+  const lines=str.replace(/\r/g,'').split('\n').filter(r=>r.trim().length);
+  const head=lines.shift().split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.map(line=>{
+    const out=[]; let cur='',inq=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"' && line[i+1]==='"'){ cur+='"'; i++; continue; }
+      if(ch==='"'){ inq=!inq; continue; }
+      if(ch===',' && !inq){ out.push(cur); cur=''; continue; }
+      cur+=ch;
+    }
+    out.push(cur);
+    const obj={}; head.forEach((h,idx)=> obj[h]= (out[idx]||'').trim() );
+    return obj;
+  });
+}
+$('lib').addEventListener('change', ev=>{
+  if(!ev.target.files.length) return;
+  const f=ev.target.files[0]; const reader=new FileReader();
+  reader.onload = e => { PRODUCT_LIB = parseCSV(e.target.result); alert('Produktbibliotek inläst: '+PRODUCT_LIB.length+' rader.'); };
+  reader.readAsText(f, 'utf-8');
+});
+
+// Suggestions
+function suggestProducts(){
+  const svc=$('svc').value;
+  const isHyg = $('hyg').value==='true';
+  const cavPref=$('cavpref').value;
+  const kvsNom=parseFloat($('kvsNomSel').value);
+  const cands=[];
+
+  if(PRODUCT_LIB.length){
+    for(const row of PRODUCT_LIB){
+      const svcOK = (row.service||'').toLowerCase()===svc;
+      const hygOK = String(row.hygienic||'false').toLowerCase()===(isHyg?'true':'false');
+      let kvsOK = true;
+      const list = (row.Kvs_nom_list||'').split('|').map(Number).filter(x=>!isNaN(x));
+      if(isFinite(kvsNom)){
+        if(list.length){ kvsOK = kvsNom <= Math.max(...list); }
+        else { kvsOK = (parseFloat(row.kvs_min||0)<=kvsNom && kvsNom<=parseFloat(row.kvs_max||1e9)); }
+      }
+      if(svcOK && hygOK && kvsOK) cands.push(row);
+    }
+  } else {
+    // Fallback
+    for(const p of RULES.products){
+      const w=p.when;
+      const svcOK=w.service===svc;
+      const hygOK=w.hygienic===isHyg;
+      const kvsOK=isFinite(kvsNom)? (kvsNom>=w.kvs_min && kvsNom<=w.kvs_max) : true;
+      if(svcOK && hygOK && kvsOK){ cands.push(p); }
+    }
+  }
+
+  const list=$('suggestList'); list.innerHTML='';
+  let text='—';
+  if(!cands.length){
+    text='Inga träffar – använd CSV-biblioteket för exakta intervall per modell/trim, eller justera öppningsgrad.';
+    $('btnDatasheet').href = '#';
+  }else{
+    text='Baserat på Kvs och scenario:';
+    for(const c of cands){
+      const li=document.createElement('li');
+      const name = c.name || c.product_name || c.id;
+      const url = c.datasheet_url || c.url || '';
+      li.innerHTML = `<b>${name}</b>${url?` – <a href="${url}" target="_blank">datablad</a>`:''}`;
+      list.appendChild(li);
+    }
+    if(cands[0] && (cands[0].datasheet_url || cands[0].url)) $('btnDatasheet').href = cands[0].datasheet_url || cands[0].url;
+  }
+  $('suggestText').textContent=text;
+}
+
+// RFQ – mailto
+function updateRFQ(){
+  const to=$('rfq').value||'sales@samson.se';
+  const lines=[
+    'Hej SAMSON,','','Data från ventilkalkylatorn:','',
+    `Q (m3/h): ${Q_m3h_liquid()} (vätska) | Gas Q: ${$('g_q').value||'-'} m3/h`,
+    `ΔP (bar): ${$('dp').value}`,`SG: ${$('sg').value}`,
+    `Öppning (%): ${$('open').value}`,`Karakteristik: ${$('char').value}${$('char').value==='eqp'?' (R='+$('r').value+')':''}`,
+    '—',`Kv: ${$('kv').textContent}`,`Kvs (krävt): ${$('kvsReq').textContent}`,
+    `Kvs nominell: ${$('kvsNomSel').value}`,`≈DN: ${$('dn').textContent}`,
+    `σ (vätska): ${$('kpiSigma').textContent}`,
+    '— GAS/ÅNGA —',
+    `P1/P2 (bar abs): ${$('g_p1').value} / ${$('g_p2').value}`,`T1 (°C): ${$('g_t').value}`,`M (g/mol): ${$('g_mw').value}`,`Z: ${$('g_z').value}`,
+    `ρ1 (kg/m3): ${$('g_rho').textContent}`,`Kv (gas): ${$('g_kv').textContent}`,`Kvs (gas, krävt): ${$('g_kvsReq').textContent}`,`Kvs (gas, nom): ${$('g_kvsNom').textContent}`
+  ];
+  const subject=encodeURIComponent(`RFQ – Ventilval Kvs ${$('kvsNomSel').value} (${$('dn').textContent})`);
+  const body=encodeURIComponent(lines.join('\n'));
+  const href=`mailto:${to}?subject=${subject}&body=${body}`;
+  $('btnRFQ').href=href;
+}
+
+// CRM webhook
+async function sendToCRM(){
+  const url = $('crmUrl').value.trim();
+  if(!url){ alert('Fyll i CRM Webhook URL i Inställningar.'); return; }
+  const payload = {
+    created_at: new Date().toISOString(),
+    liquid: {
+      Q_m3h: Q_m3h_liquid(), dP_bar: $('dp').value, SG: $('sg').value, opening_pct: $('open').value,
+      char: $('char').value, R: $('r').value, Kv: $('kv').textContent, Kvs_req: $('kvsReq').textContent,
+      Kvs_nom: $('kvsNomSel').value, DN_est: $('dn').textContent, sigma: $('kpiSigma').textContent
+    },
+    gas_beta: {
+      Q_m3h: $('g_q').value, P1_barA: $('g_p1').value, P2_barA: $('g_p2').value, T1_C: $('g_t').value,
+      MW_gmol: $('g_mw').value, Z: $('g_z').value, rho1: $('g_rho').textContent, Kv: $('g_kv').textContent,
+      Kvs_req: $('g_kvsReq').textContent, Kvs_nom: $('g_kvsNom').textContent
+    }
+  };
+  try{
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', ...( $('crmKey').value? {'X-API-Key': $('crmKey').value} : {} )},
+      body: JSON.stringify(payload)
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    alert('Skickat till CRM!');
+  }catch(e){
+    alert('Kunde inte skicka till CRM: '+e.message);
+  }
+}
+$('btnCRM').addEventListener('click', sendToCRM);
+
+// Branding & settings
+function applyBrand(){
+  document.documentElement.style.setProperty('--accent', $('accent').value||'#3E8CCB');
+  if($('logo').value){ $('navLogo').src=$('logo').value; }
+}
+function persist(){
+  const data = {
+    q:$('q').value,qu:$('qu').value,dp:$('dp').value,sg:$('sg').value,open:$('open').value,char:$('char').value,r:$('r').value,
+    p1:$('p1').value,p2:$('p2').value,pv:$('pv').value,
+    series:$('series').value,dnJSON:$('dnJSON').value,accent:$('accent').value,logo:$('logo').value,rfq:$('rfq').value,crmUrl:$('crmUrl').value,crmKey:$('crmKey').value,
+    g_q:$('g_q').value,g_p1:$('g_p1').value,g_p2:$('g_p2').value,g_t:$('g_t').value,g_mw:$('g_mw').value,g_z:$('g_z').value
+  };
+  storage.set('samson_calc_v4', data);
+}
+function loadPersist(){
+  const raw=JSON.stringify(storage.get('samson_calc_v4')); if(!raw) return;
+  try{ const d=JSON.parse(raw);
+    Object.keys(d).forEach(k=>{ if($(k)) $(k).value=d[k]; });
+  }catch(e){}
+}
+function applySettingsFromInputs(){
+  SERIES = $('series').value.split(',').map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x)).sort((a,b)=>a-b);
+  try{ DN_RULES = JSON.parse($('dnJSON').value); }catch(e){ /* keep previous */ }
+  applyBrand(); refreshKvsSelect(); updateKvs(); updateCav(); gas_calc(); updateRFQ(); try{ persist(); }catch(e){ console.warn('persist blocked', e); }
+}
+
+// CSV export
+function downloadCSV(){
+  const rows=[
+    ['Fält','Värde'],
+    ['Q (m3/h)', Q_m3h_liquid()], ['ΔP (bar)', $('dp').value], ['SG', $('sg').value],
+    ['Öppning (%)', $('open').value], ['Karakteristik', $('char').value],
+    ['Kv', $('kv').textContent], ['Kvs (krävt)', $('kvsReq').textContent],
+    ['Kvs nominell', $('kvsNomSel').value], ['≈DN', $('dn').textContent],
+    ['P1 (bar)', $('p1').value], ['P2 (bar)', $('p2').value], ['Pv (bar)', $('pv').value], ['σ', $('kpiSigma').textContent],
+    ['GasQ (m3/h)', $('g_q').value], ['P1a (bar)', $('g_p1').value], ['P2a (bar)', $('g_p2').value], ['T1 (C)', $('g_t').value],
+    ['MW (g/mol)', $('g_mw').value], ['Z', $('g_z').value], ['rho1 (kg/m3)', $('g_rho').textContent], ['Kv gas', $('g_kv').textContent], ['Kvs gas req', $('g_kvsReq').textContent], ['Kvs gas nom', $('g_kvsNom').textContent]
+  ];
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='samson_kalkyl_v4.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),500);
+}
+
+// PDF (print)
+function createPDF(){
+  const w=window.open('','_blank');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ventilrapport v4</title>
+  <style>@page{size:A4;margin:14mm}body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0b1220}
+  h1,h2{margin:0 0 6px}.muted{color:#475569}.box{border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;margin:8px 0}
+  .row{display:flex;gap:12px}.row>div{flex:1}table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{border:1px solid #e2e8f0;padding:6px 8px;font-size:12px;text-align:left}th{background:#f8fafc}</style></head><body>
+  <h1>Ventilrapport (SAMSON – v4)</h1><div class="muted">Skapad: ${new Date().toLocaleString()}</div>
+  <div class="row"><div class="box"><h2>Vätska</h2>
+    <div><b>Kv:</b> ${$('kv').textContent}</div>
+    <div><b>Kvs (krävt):</b> ${$('kvsReq').textContent}</div>
+    <div><b>Kvs nominell:</b> ${$('kvsNomSel').value} · <b>≈DN:</b> ${$('dn').textContent}</div>
+    <table><tr><th>Parameter</th><th>Värde</th></tr>
+      <tr><td>Q (m³/h)</td><td>${Q_m3h_liquid()}</td></tr>
+      <tr><td>ΔP (bar)</td><td>${$('dp').value}</td></tr>
+      <tr><td>SG</td><td>${$('sg').value}</td></tr>
+      <tr><td>Öppningsgrad (%)</td><td>${$('open').value}</td></tr>
+      <tr><td>Karakteristik</td><td>${$('char').value}${$('char').value==='eqp'?' (R='+$('r').value+')':''}</td></tr>
+      <tr><td>σ</td><td>${$('kpiSigma').textContent}</td></tr>
+    </table></div>
+    <div class="box"><h2>Gas/Ånga (BETA)</h2>
+      <div><b>Kv:</b> ${$('g_kv').textContent}</div>
+      <div><b>Kvs (krävt):</b> ${$('g_kvsReq').textContent}</div>
+      <div><b>Kvs nominell:</b> ${$('g_kvsNom').textContent}</div>
+      <table><tr><th>P1 (bar abs)</th><th>P2 (bar abs)</th><th>T1 (°C)</th><th>MW</th><th>Z</th><th>ρ1 (kg/m3)</th></tr>
+        <tr><td>${$('g_p1').value}</td><td>${$('g_p2').value}</td><td>${$('g_t').value}</td><td>${$('g_mw').value}</td><td>${$('g_z').value}</td><td>${$('g_rho').textContent}</td></tr>
+      </table></div></div>
+  <div class="box"><h2>Produktförslag</h2>
+    <div class="muted">${$('suggestText').textContent}</div>
+    <ul>${Array.from(document.querySelectorAll('#suggestList li')).map(li=>'<li>'+li.innerHTML+'</li>').join('')}</ul>
+  </div>
+  <div class="muted">Obs: Gas/Ånga är förenklad (icke-strypt antagen). Verifiera mot IEC 60534-2-1 och produktdatablad.</div>
+  <script>window.print();</script></body></html>`;
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+// Apply & events
+function apply(){
+  try{ SERIES = $('series').value.split(',').map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x)).sort((a,b)=>a-b); }catch(e){}
+  try{ DN_RULES = JSON.parse($('dnJSON').value); }catch(e){}
+  applyBrand(); refreshKvsSelect(); updateKvs(); updateCav(); gas_calc(); updateRFQ(); try{ persist(); }catch(e){ console.warn('persist blocked', e); }
+}
+
+// Listeners
+['q','qu','dp','sg','open','char','r'].forEach(id=>$(id).addEventListener('input',()=>{ if(id==='char'){$('rWrap').style.display=($('char').value==='eqp')?'block':'none';} updateKvs(); updateRFQ(); try{ persist(); }catch(e){ console.warn('persist blocked', e); } }));
+['p1','p2','pv'].forEach(id=>$(id).addEventListener('input',()=>{ updateCav(); updateRFQ(); try{ persist(); }catch(e){ console.warn('persist blocked', e); } }));
+['svc','hyg','cavpref'].forEach(id=>$(id).addEventListener('change', ()=>{ suggestProducts(); try{ persist(); }catch(e){ console.warn('persist blocked', e); } }));
+['g_q','g_p1','g_p2','g_t','g_mw','g_z'].forEach(id=>$(id).addEventListener('input', ()=>{ gas_calc(); try{ persist(); }catch(e){ console.warn('persist blocked', e); } }));
+$('btnSuggest').addEventListener('click', suggestProducts);
+$('btnCSV').addEventListener('click', downloadCSV);
+$('btnPDF').addEventListener('click', createPDF);
+$('btnShare').addEventListener('click', ()=>{ const url=location.origin+location.pathname+'?'+new URLSearchParams(Object.fromEntries(['accent','logo','rfq','series'].map(id=>[id,$(id).value]))).toString(); navigator.clipboard.writeText(url).then(()=>alert('Länk kopierad!')).catch(()=>prompt('Kopiera:', url)); });
+$('btnApply').addEventListener('click', apply);
+$('btnLoad').addEventListener('click', ()=>{ loadPersist(); apply(); });
+$('btnReset').addEventListener('click', ()=>{ if(!confirm('Återställ alla fält?')) return; storage.remove('samson_calc_v4'); location.reload(); });
+
+// Init
+(function init(){
+  $('dnJSON').value = JSON.stringify(DN_RULES, null, 2);
+  try{ loadPersist(); }catch(e){}
+  try{ apply(); }catch(e){ console.error('Init apply failed', e); }
+})();
+</script>
+</body>
+</html>
